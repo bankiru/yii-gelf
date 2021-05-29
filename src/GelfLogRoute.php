@@ -37,17 +37,18 @@ class GelfLogRoute extends \CLogRoute
         $this->transport = $transport;
     }
 
-    /**
-     * Processes log messages and sends them to specific destination.
-     * Derived child classes must implement this method.
-     * @param array $logs list of messages. Each array element represents one message
-     * with the following structure:
-     * array(
-     *   [0] => message (string)
-     *   [1] => level (string)
-     *   [2] => category (string)
-     *   [3] => timestamp (float, obtained by microtime(true));
-     */
+	/**
+	 * Processes log messages and sends them to specific destination.
+	 * Derived child classes must implement this method.
+	 * @param array $logs list of messages. Each array element represents one message
+	 * with the following structure:
+	 * array(
+	 *   [0] => message (string)
+	 *   [1] => level (string)
+	 *   [2] => category (string)
+	 *   [3] => timestamp (float, obtained by microtime(true));
+	 * @throws \Exception
+	 */
     protected function processLogs($logs)
     {
         $publisher = new Gelf\Publisher($this->transport);
@@ -100,8 +101,21 @@ class GelfLogRoute extends \CLogRoute
                 $gelfMessage->setAdditional('trace', implode("\n", $traces));
             }
 
-            // Publishing message
-            $publisher->publish($gelfMessage);
+	        // Publishing message
+	        try {
+		        $publisher->publish($gelfMessage);
+	        } catch (\Exception $exception) {
+		        if (!$this->transport instanceof Gelf\Transport\UdpTransport) {
+			        throw $exception;
+		        }
+		        if (defined('YII_GELF_LOG_ROUTE_FALLBACK_FILE')) {
+			        file_put_contents(
+				        YII_GELF_LOG_ROUTE_FALLBACK_FILE,
+				        json_encode($gelfMessage->toArray(), JSON_UNESCAPED_UNICODE),
+				        FILE_APPEND
+			        );
+		        }
+	        }
         }
     }
 }

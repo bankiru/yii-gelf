@@ -58,3 +58,10 @@ return [
     // ...
 ];
 ```
+Dev
+------------
+```sh
+docker build -t bankiru/yii-gelf:latest -f ./Dockerfile ./
+docker run -it --rm --net=host -v $SSH_AUTH_SOCK:/ssh-agent-sock --env SSH_AUTH_SOCK=/ssh-agent-sock -v $(pwd):/app -w /app bankiru/yii-gelf:latest bash
+composer install -o
+```
