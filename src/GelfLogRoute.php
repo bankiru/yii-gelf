@@ -47,6 +47,7 @@ class GelfLogRoute extends \CLogRoute
      *   [1] => level (string)
      *   [2] => category (string)
      *   [3] => timestamp (float, obtained by microtime(true));
+     * @throws \Exception
      */
     protected function processLogs($logs)
     {
@@ -101,7 +102,20 @@ class GelfLogRoute extends \CLogRoute
             }
 
             // Publishing message
-            $publisher->publish($gelfMessage);
+            try {
+                $publisher->publish($gelfMessage);
+            } catch (\Exception $exception) {
+                if (!$this->transport instanceof Gelf\Transport\UdpTransport) {
+                    throw $exception;
+                }
+                if (defined('YII_GELF_LOG_ROUTE_FALLBACK_FILE')) {
+                    file_put_contents(
+                        YII_GELF_LOG_ROUTE_FALLBACK_FILE,
+                        json_encode($gelfMessage->toArray(), JSON_UNESCAPED_UNICODE),
+                        FILE_APPEND
+                    );
+                }
+            }
         }
     }
 }
